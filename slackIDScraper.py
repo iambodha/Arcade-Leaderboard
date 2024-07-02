@@ -1,63 +1,87 @@
 import requests
+import json
+from datetime import datetime
 
-url = 'https://hackclub.slack.com/api/search.modules.messages'
+def simulateApiRequest(marker=None, isFirstRequest=False):
+    url = "https://edgeapi.slack.com/cache/T0266FRGM/users/list"
+    
+    params = {
+        "fp": "91",
+        "_x_num_retries": "0"
+    }
+    
+    headers = {
+        "Authority": "edgeapi.slack.com",
+        "Method": "POST",
+        "Path": "/cache/T0266FRGM/users/list?fp=91&_x_num_retries=0",
+        "Scheme": "https",
+        "Accept": "*/*",
+        "Accept-Encoding": "gzip, deflate, br, zstd",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Content-Type": "text/plain;charset=UTF-8",
+        "Cookie": "your-cookie",
+        "Origin": "https://app.slack.com",
+        "Priority": "u=1, i",
+        "Sec-Ch-Ua": '"Not/A)Brand";v="8", "Chromium";v="126", "Google Chrome";v="126"',
+        "Sec-Ch-Ua-Mobile": "?0",
+        "Sec-Ch-Ua-Platform": '"Windows"',
+        "Sec-Fetch-Dest": "empty",
+        "Sec-Fetch-Mode": "cors",
+        "Sec-Fetch-Site": "same-site",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+    }
+    
+    data = {
+        "token": "your-token",
+        "include_profile_only_users": True,
+        "count": 100,
+        "channels": ["C06SBHMQU8G"],
+        "filter": "people",
+        "index": "users_by_display_name",
+        "locale": "en-US",
+        "present_first": False,
+        "fuzz": 1
+    }
+    
+    if not isFirstRequest and marker:
+        data["marker"] = marker
+    
+    try:
+        response = requests.post(url, params=params, headers=headers, json=data)
+        response.raise_for_status()
+        
+        return response.json()
+        
+    except requests.exceptions.RequestException as e:
+        print(f"An error occurred: {e}")
+        return None
 
-headers = {
-    'Accept': '*/*',
-    'Accept-Encoding': 'gzip, deflate, br, zstd',
-    'Accept-Language': 'en-US,en;q=0.9',
-    'Content-Type': 'multipart/form-data; boundary=----WebKitFormBoundaryAPebTy6O75z0AfpM',
-    'Cookie': 'your-cookie-data-here',
-    'Origin': 'https://app.slack.com',
-    'Sec-Fetch-Dest': 'empty',
-    'Sec-Fetch-Mode': 'cors',
-    'Sec-Fetch-Site': 'same-site',
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
-}
+def main():
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"slackApiResponses_{timestamp}.json"
+    
+    allResponses = []
+    marker = None
+    
+    for i in range(51):
+        isFirstRequest = (i == 0)
+        responseData = simulateApiRequest(marker, isFirstRequest)
+        if responseData:
+            allResponses.append(responseData)
+            marker = responseData.get("next_marker")
+            if not marker:
+                break
+        else:
+            break
+    
+    output = {
+        "responses": allResponses
+    }
+    
+    with open(filename, 'w') as f:
+        json.dump(output, f, indent=2)
+    
+    print(f"Output saved to {filename}")
 
-data = {
-    'token': 'your-token-here',
-    'module': 'messages',
-    'query': 'in:<#C06SBHMQU8G|arcade> you\'ve got a arcade session! this session is now approved!',
-    'page': '2',
-    'client_reqId': 'your-clientid-here',
-    'searchSessionId': 'your-searchid-here',
-    'extracts': '1',
-    'highlight': '1',
-    'maxExtractLen': '200',
-    'extraMessageData': '1',
-    'noUserProfile': '1',
-    'count': '20',
-    'fileTitleOnly': 'false',
-    'queryRewriteDisabled': 'false',
-    'includeFilesShares': '1',
-    'searchContext': 'desktop_messages_tab',
-    'searchExcludeBots': 'false',
-    'searchOnlyMyChannels': 'false',
-    'spellCorrection': 'FUZZY_MATCH',
-    'searchOnlyTeam': '',
-    'facetsResultCount': '5',
-    'queryRefinementSuggestionsVersion': '1',
-    'recentChannels': 'C06SBHMQU8G',
-    'sort': 'timestamp',
-    'sortDir': 'asc',
-    'maxFilterSuggestions': '10',
-    'requestContext': '{"active_cid":"SearchEmpty","recent_filter_in":["C06SBHMQU8G"],"recent_filter_from":[]}',
-    'searchTabFilter': 'messages',
-    'searchTabSort': 'timestamp',
-    '_xReason': 'search-messages-page',
-    '_xMode': 'online',
-    '_xSonic': 'true',
-    '_xAppName': 'client',
-}
-
-response = requests.post(url, headers=headers, data=data)
-
-if response.status_code == 200:
-    print('Request successful!')
-    print('Response:')
-    print(response.json())
-else:
-    print(f'Request failed with status code {response.status_code}')
-    print('Response:')
-    print(response.text)
+if __name__ == "__main__":
+    main()

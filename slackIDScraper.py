@@ -1,51 +1,63 @@
-import os
-from slack_sdk import WebClient
-from slack_sdk.errors import SlackApiError
+import requests
 
-SLACK_BOT_TOKEN = 'xoxb-your-slack-bot-token'
-CHANNEL_ID = 'C06SBHMQU8G'
+url = 'https://hackclub.slack.com/api/search.modules.messages'
 
-client = WebClient(token=SLACK_BOT_TOKEN)
+headers = {
+    'Accept': '*/*',
+    'Accept-Encoding': 'gzip, deflate, br, zstd',
+    'Accept-Language': 'en-US,en;q=0.9',
+    'Content-Type': 'multipart/form-data; boundary=----WebKitFormBoundaryAPebTy6O75z0AfpM',
+    'Cookie': 'your-cookie-data-here',
+    'Origin': 'https://app.slack.com',
+    'Sec-Fetch-Dest': 'empty',
+    'Sec-Fetch-Mode': 'cors',
+    'Sec-Fetch-Site': 'same-site',
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+}
 
-def searchMessages(channelId, searchQuery):
-    userIds = set()
-    cursor = None
-    while True:
-        try:
-            if cursor:
-                response = client.search_messages(channel=channelId, query=searchQuery, sort="timestamp", cursor=cursor, count=1000)
-            else:
-                response = client.search_messages(channel=channelId, query=searchQuery, sort="timestamp", count=1000)
-            
-            if response['ok']:
-                for message in response['messages']['matches']:
-                    userIds.add(message['user'])
-                
-                if 'response_metadata' in response and 'next_cursor' in response['response_metadata']:
-                    cursor = response['response_metadata']['next_cursor']
-                else:
-                    break
-            else:
-                print(f"Error: {response['error']}")
-                break
-        except SlackApiError as e:
-            print(f"Error fetching messages: {e.response['error']}")
-            break
-    return list(userIds)
+data = {
+    'token': 'your-token-here',
+    'module': 'messages',
+    'query': 'in:<#C06SBHMQU8G|arcade> you\'ve got a arcade session! this session is now approved!',
+    'page': '2',
+    'client_reqId': 'your-clientid-here',
+    'searchSessionId': 'your-searchid-here',
+    'extracts': '1',
+    'highlight': '1',
+    'maxExtractLen': '200',
+    'extraMessageData': '1',
+    'noUserProfile': '1',
+    'count': '20',
+    'fileTitleOnly': 'false',
+    'queryRewriteDisabled': 'false',
+    'includeFilesShares': '1',
+    'searchContext': 'desktop_messages_tab',
+    'searchExcludeBots': 'false',
+    'searchOnlyMyChannels': 'false',
+    'spellCorrection': 'FUZZY_MATCH',
+    'searchOnlyTeam': '',
+    'facetsResultCount': '5',
+    'queryRefinementSuggestionsVersion': '1',
+    'recentChannels': 'C06SBHMQU8G',
+    'sort': 'timestamp',
+    'sortDir': 'asc',
+    'maxFilterSuggestions': '10',
+    'requestContext': '{"active_cid":"SearchEmpty","recent_filter_in":["C06SBHMQU8G"],"recent_filter_from":[]}',
+    'searchTabFilter': 'messages',
+    'searchTabSort': 'timestamp',
+    '_xReason': 'search-messages-page',
+    '_xMode': 'online',
+    '_xSonic': 'true',
+    '_xAppName': 'client',
+}
 
-def saveUserIdsToFile(userIds, filePath):
-    try:
-        with open(filePath, 'w') as file:
-            for userId in userIds:
-                file.write(f"{userId}\n")
-        print(f"User IDs have been saved to {filePath}")
-    except Exception as e:
-        print(f"Error saving user IDs to file: {e}")
+response = requests.post(url, headers=headers, data=data)
 
-if __name__ == "__main__":
-    searchQuery = 'in:#arcade "you\'ve got a arcade session! this session is now approved!"'
-    userIds = searchMessages(CHANNEL_ID, searchQuery)
-    if userIds:
-        saveUserIdsToFile(userIds, 'arcade_session_user_ids.txt')
-    else:
-        print(f"No user IDs found matching the search query in channel {CHANNEL_ID}.")
+if response.status_code == 200:
+    print('Request successful!')
+    print('Response:')
+    print(response.json())
+else:
+    print(f'Request failed with status code {response.status_code}')
+    print('Response:')
+    print(response.text)
